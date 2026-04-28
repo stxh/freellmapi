@@ -8,6 +8,11 @@ server/data/
 .env.local
 .DS_Store
 
+# Debug and temporary files
+*.log
+.qwen/
+
 # Personal deployment scripts (contain keys/credentials — kept local)
 deploy-pi.sh
 update-hermes.sh
+bun.lock
