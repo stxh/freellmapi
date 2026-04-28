@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { keysRouter } from './routes/keys.js';
 import { modelsRouter } from './routes/models.js';
 import { proxyRouter } from './routes/proxy.js';
@@ -12,7 +11,9 @@ import { healthRouter } from './routes/health.js';
 import { settingsRouter } from './routes/settings.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = typeof import.meta.url === 'string' && import.meta.url.startsWith('file:')
+  ? new URL('.', import.meta.url).pathname.replace(/^\/([a-zA-Z]:\/?)/, '$1').replace(/\//g, '\\')
+  : new URL('.', import.meta.url).toString();
 
 export function createApp() {
   const app = express();

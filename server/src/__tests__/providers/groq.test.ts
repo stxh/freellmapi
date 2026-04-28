@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GroqProvider } from '../../providers/groq.js';
 
 describe('GroqProvider', () => {
@@ -68,5 +68,9 @@ describe('GroqProvider', () => {
 
     vi.spyOn(global, 'fetch').mockResolvedValueOnce({ ok: false } as any);
     expect(await provider.validateKey('invalid')).toBe(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 });

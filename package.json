@@ -7,12 +7,10 @@
     "client"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
-    "test": "npm run test -w server && npm run test -w client",
-    "build": "npm run build -w server && npm run build -w client",
-    "build:server": "npm run build -w server"
+    "dev": "cd server && bun run dev",
+    "test": "bun run test -w server && bun run test -w client",
+    "build": "bun run build -w server && bun run build -w client",
+    "build:server": "bun run build -w server"
   },
-  "devDependencies": {
-    "concurrently": "^9.1.2"
-  }
+  "devDependencies": {}
 }

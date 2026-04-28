@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CerebrasProvider } from '../../providers/cerebras.js';
 
 describe('CerebrasProvider', () => {
@@ -51,5 +51,9 @@ describe('CerebrasProvider', () => {
   it('should validate key', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValueOnce({ ok: true } as any);
     expect(await provider.validateKey('valid')).toBe(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 });

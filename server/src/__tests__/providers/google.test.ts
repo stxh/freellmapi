@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GoogleProvider } from '../../providers/google.js';
 
 describe('GoogleProvider', () => {
@@ -170,5 +170,9 @@ describe('GoogleProvider', () => {
     expect(result.choices[0].message.tool_calls?.[0].id).toBe('call_123');
     expect(result.choices[0].message.tool_calls?.[0].function.name).toBe('get_weather');
     expect(result.choices[0].message.tool_calls?.[0].function.arguments).toBe('{"city":"Lahore"}');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 });

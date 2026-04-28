@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CloudflareProvider } from '../../providers/cloudflare.js';
 
 describe('CloudflareProvider', () => {
@@ -91,5 +91,9 @@ describe('CloudflareProvider', () => {
 
     expect(capturedBody.messages[1].content).toBe('');
     expect(capturedBody.messages[1].tool_calls).toHaveLength(1);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 });

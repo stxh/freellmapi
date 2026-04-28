@@ -57,32 +57,36 @@ describe('Proxy tool-calling support', () => {
       const urlStr = typeof url === 'string' ? url : url.toString();
       if (urlStr.includes('api.groq.com/openai/v1/chat/completions')) {
         providerBody = JSON.parse((init as any).body);
+        const jsonData = {
+          id: 'chatcmpl-tool',
+          object: 'chat.completion',
+          created: 123,
+          model: 'openai/gpt-oss-120b',
+          choices: [{
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [{
+                id: 'call_weather',
+                type: 'function',
+                function: {
+                  name: 'get_weather',
+                  arguments: '{"city":"Karachi"}',
+                },
+              }],
+            },
+            finish_reason: 'tool_calls',
+          }],
+          usage: { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 },
+        };
         return {
           ok: true,
-          json: () => Promise.resolve({
-            id: 'chatcmpl-tool',
-            object: 'chat.completion',
-            created: 123,
-            model: 'openai/gpt-oss-120b',
-            choices: [{
-              index: 0,
-              message: {
-                role: 'assistant',
-                content: null,
-                tool_calls: [{
-                  id: 'call_weather',
-                  type: 'function',
-                  function: {
-                    name: 'get_weather',
-                    arguments: '{"city":"Karachi"}',
-                  },
-                }],
-              },
-              finish_reason: 'tool_calls',
-            }],
-            usage: { prompt_tokens: 12, completion_tokens: 4, total_tokens: 16 },
-          }),
-        } as any;
+          status: 200,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: () => Promise.resolve(jsonData),
+          text: () => Promise.resolve(JSON.stringify(jsonData)),
+        };
       }
       return origFetch(url, init);
     });
@@ -120,24 +124,28 @@ describe('Proxy tool-calling support', () => {
       const urlStr = typeof url === 'string' ? url : url.toString();
       if (urlStr.includes('api.groq.com/openai/v1/chat/completions')) {
         providerBody = JSON.parse((init as any).body);
+        const jsonData = {
+          id: 'chatcmpl-final',
+          object: 'chat.completion',
+          created: 123,
+          model: 'openai/gpt-oss-120b',
+          choices: [{
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: 'It is 30C in Karachi.',
+            },
+            finish_reason: 'stop',
+          }],
+          usage: { prompt_tokens: 18, completion_tokens: 6, total_tokens: 24 },
+        };
         return {
           ok: true,
-          json: () => Promise.resolve({
-            id: 'chatcmpl-final',
-            object: 'chat.completion',
-            created: 123,
-            model: 'openai/gpt-oss-120b',
-            choices: [{
-              index: 0,
-              message: {
-                role: 'assistant',
-                content: 'It is 30C in Karachi.',
-              },
-              finish_reason: 'stop',
-            }],
-            usage: { prompt_tokens: 18, completion_tokens: 6, total_tokens: 24 },
-          }),
-        } as any;
+          status: 200,
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: () => Promise.resolve(jsonData),
+          text: () => Promise.resolve(JSON.stringify(jsonData)),
+        };
       }
       return origFetch(url, init);
     });

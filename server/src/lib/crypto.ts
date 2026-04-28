@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import Database from 'better-sqlite3';
+const { Database } = (global as any).bun?.sqlite || require('bun:sqlite');
 
 const ALGORITHM = 'aes-256-gcm';
 
@@ -9,7 +9,7 @@ let cachedKey: Buffer | null = null;
  * Initialize encryption key from env, DB, or generate a new one.
  * Must be called after DB is initialized.
  */
-export function initEncryptionKey(db: Database.Database): void {
+export function initEncryptionKey(db: typeof Database): void {
   // 1. Check env var
   const envKey = process.env.ENCRYPTION_KEY;
   if (envKey && envKey !== 'your-64-char-hex-key-here') {

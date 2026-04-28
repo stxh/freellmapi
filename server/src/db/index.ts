@@ -1,23 +1,26 @@
 import crypto from 'crypto';
-import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { initEncryptionKey } from '../lib/crypto.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const { Database } = (global as any).bun?.sqlite || require('bun:sqlite');
+type DatabaseType = Database;
+
+const __dirname = typeof import.meta.url === 'string' && import.meta.url.startsWith('file:')
+  ? new URL('.', import.meta.url).pathname.replace(/^\/([a-zA-Z]:\/?)/, '$1').replace(/\//g, '\\')
+  : new URL('.', import.meta.url).toString();
 const DB_PATH = path.resolve(__dirname, '../../data/freeapi.db');
 
-let db: Database.Database;
+let db: DatabaseType;
 
-export function getDb(): Database.Database {
+export function getDb(): DatabaseType {
   if (!db) {
     throw new Error('Database not initialized. Call initDb() first.');
   }
   return db;
 }
 
-export function initDb(dbPath?: string): Database.Database {
+export function initDb(dbPath?: string): DatabaseType {
   const resolvedPath = dbPath ?? DB_PATH;
   const isMemory = resolvedPath === ':memory:';
 
@@ -29,8 +32,8 @@ export function initDb(dbPath?: string): Database.Database {
   }
 
   db = new Database(resolvedPath);
-  if (!isMemory) db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
+  if (!isMemory) db.exec('PRAGMA journal_mode = WAL');
+  db.exec('PRAGMA foreign_keys = ON');
 
   createTables(db);
   initEncryptionKey(db);
@@ -47,7 +50,7 @@ export function initDb(dbPath?: string): Database.Database {
   return db;
 }
 
-function createTables(db: Database.Database) {
+function createTables(db: DatabaseType) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS models (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,7 +114,7 @@ function createTables(db: Database.Database) {
   `);
 }
 
-function seedModels(db: Database.Database) {
+function seedModels(db: DatabaseType) {
   const count = db.prepare('SELECT COUNT(*) as cnt FROM models').get() as { cnt: number };
   if (count.cnt > 0) return;
 
@@ -186,7 +189,7 @@ function seedModels(db: Database.Database) {
  * corrects stale rate-limits / monthly budgets, adds new smarter models
  * and three new providers (Zhipu, Moonshot, MiniMax).
  */
-function migrateModels(db: Database.Database) {
+function migrateModels(db: DatabaseType) {
   // 1) Replace outdated models in-place (preserves fallback_config & any references)
   const renames: Array<[string, string, string, string, number, string, number | null, number | null, number]> = [
     // platform, oldModelId, newModelId, newDisplayName, intelligenceRank, monthlyBudget, rpdLimit, contextWindow, sizeLabelPriority(unused)
@@ -265,7 +268,7 @@ function migrateModels(db: Database.Database) {
  * the current free tier, and adds real :free OpenRouter models found in the
  * live catalog (April 2026).
  */
-function migrateModelsV2(db: Database.Database) {
+function migrateModelsV2(db: DatabaseType) {
   // Helper: delete a model and its fallback_config entry (FK is RESTRICT-by-default)
   const deleteModel = db.prepare(`DELETE FROM models WHERE platform = ? AND model_id = ?`);
   const deleteFallback = db.prepare(`
@@ -341,7 +344,7 @@ function migrateModelsV2(db: Database.Database) {
  * SWE-bench Verified, Terminal-Bench 2, TAU-Bench, Aider Polyglot.
  * Higher rank = weaker. Ties are allowed (same weights across providers).
  */
-function migrateModelsV3Ranks(db: Database.Database) {
+function migrateModelsV3Ranks(db: DatabaseType) {
   const setRank = db.prepare(`UPDATE models SET intelligence_rank = ? WHERE platform = ? AND model_id = ?`);
   const ranks: Array<[number, string, string]> = [
     // #1-10 frontier coders / agents
@@ -396,7 +399,7 @@ function migrateModelsV3Ranks(db: Database.Database) {
  * (no structured tools), OR/gemma-4 (weak at tools). Renames CF llama-3.1 → 3.3
  * fp8-fast. Corrects stale limits.
  */
-function migrateModelsV4(db: Database.Database) {
+function migrateModelsV4(db: DatabaseType) {
   // 1) Remove entries that are unavailable or fail agentic tool use
   const deleteModel = db.prepare(`DELETE FROM models WHERE platform = ? AND model_id = ?`);
   const deleteFallback = db.prepare(`
@@ -551,7 +554,7 @@ function migrateModelsV4(db: Database.Database) {
  * free tier but throttled to 10 RPM / 100 RPD due to high demand; context capped
  * at 8192 on free tier).
  */
-function migrateModelsV5(db: Database.Database) {
+function migrateModelsV5(db: DatabaseType) {
   db.prepare(`UPDATE models SET enabled = 0 WHERE platform = 'google' AND model_id = 'gemini-2.5-pro'`).run();
 
   const insert = db.prepare(`
@@ -592,7 +595,7 @@ function migrateModelsV5(db: Database.Database) {
  *     against the same 20 RPD pool, confirming free-tier eligibility)
  *   - 2 OpenRouter :free models with no expiration_date
  */
-function migrateModelsV6(db: Database.Database) {
+function migrateModelsV6(db: DatabaseType) {
   // 1) Remove confirmed-dead OR route
   const deleteModel = db.prepare(`DELETE FROM models WHERE platform = ? AND model_id = ?`);
   const deleteFallback = db.prepare(`
@@ -661,7 +664,7 @@ function migrateModelsV6(db: Database.Database) {
   apply();
 }
 
-function ensureUnifiedKey(db: Database.Database) {
+function ensureUnifiedKey(db: DatabaseType) {
   const existing = db.prepare("SELECT value FROM settings WHERE key = 'unified_api_key'").get() as { value: string } | undefined;
   if (!existing) {
     const key = `freellmapi-${crypto.randomBytes(24).toString('hex')}`;
