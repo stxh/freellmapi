@@ -7,6 +7,7 @@ import PlaygroundPage from '@/pages/PlaygroundPage'
 import FallbackPage from '@/pages/FallbackPage'
 import AnalyticsPage from '@/pages/AnalyticsPage'
 import LoginPage from '@/pages/LoginPage'
+import SettingsPage from '@/pages/SettingsPage'
 import { useAuth } from '@/lib/auth'
 
 const queryClient = new QueryClient()
@@ -86,9 +87,10 @@ function App() {
                     <NavItem to="/fallback">Fallback</NavItem>
                     <NavItem to="/analytics">Analytics</NavItem>
                   </nav>
-                  <div className="ml-auto py-2">
-                    <DarkModeToggle />
-                  </div>
+                 <div className="ml-auto py-2">
+                   <NavItem to="/settings">⚙️ Settings</NavItem>
+                   <DarkModeToggle />
+                 </div>
                 </div>
               </header>
               <main className="max-w-6xl mx-auto px-6 py-8">
@@ -98,6 +100,7 @@ function App() {
                   <Route path="/keys" element={<KeysPage />} />
                   <Route path="/fallback" element={<FallbackPage />} />
                   <Route path="/analytics" element={<AnalyticsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/test" element={<Navigate to="/playground" replace />} />
                   <Route path="/health" element={<Navigate to="/keys" replace />} />
                 </Routes>

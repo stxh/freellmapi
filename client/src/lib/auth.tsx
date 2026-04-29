@@ -1,9 +1,17 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
+
+type ServerConfig = {
+  serverUrl: string;
+  token: string;
+};
 
 type AuthContextType = {
   isAuthenticated: boolean;
-  login: (token: string) => void;
+  serverConfig: ServerConfig;
+  login: (serverUrl: string, token: string) => void;
   logout: () => void;
+  updateServerConfig: (config: Partial<ServerConfig>) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,26 +26,61 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [serverConfig, setServerConfig] = useState<ServerConfig>({
+    serverUrl: 'http://localhost:3001',
+    token: ''
+  });
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setIsAuthenticated(true);
+    const savedConfig = localStorage.getItem('serverConfig');
+    if (savedConfig) {
+      try {
+        const config = JSON.parse(savedConfig);
+        setServerConfig({
+          serverUrl: config.serverUrl || 'http://localhost:3001',
+          token: config.token || ''
+        });
+        setIsAuthenticated(!!config.token);
+      } catch {
+        setServerConfig({
+          serverUrl: 'http://localhost:3001',
+          token: ''
+        });
+      }
     }
   }, []);
 
-  const login = (token: string) => {
-    localStorage.setItem('token', token);
-    setIsAuthenticated(true);
+  const login = (serverUrl: string, token: string) => {
+    const config = { serverUrl: serverUrl.trim(), token: token.trim() };
+    localStorage.setItem('serverConfig', JSON.stringify(config));
+    setServerConfig(config);
+    setIsAuthenticated(!!token.trim());
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('serverConfig');
+    setServerConfig({
+      serverUrl: 'http://localhost:3001',
+      token: ''
+    });
     setIsAuthenticated(false);
   };
 
+  const updateServerConfig = (updates: Partial<ServerConfig>) => {
+    const newConfig = { ...serverConfig, ...updates };
+    localStorage.setItem('serverConfig', JSON.stringify(newConfig));
+    setServerConfig(newConfig);
+    setIsAuthenticated(!!newConfig.token);
+  };
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated, 
+      serverConfig, 
+      login, 
+      logout, 
+      updateServerConfig 
+    }}>
       {children}
     </AuthContext.Provider>
   );
