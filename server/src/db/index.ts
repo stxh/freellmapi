@@ -1,15 +1,15 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { initEncryptionKey } from '../lib/crypto.js';
 
 const { Database } = (global as any).bun?.sqlite || require('bun:sqlite');
-type DatabaseType = Database;
+type DatabaseType = InstanceType<typeof Database>;
 
-const __dirname = typeof import.meta.url === 'string' && import.meta.url.startsWith('file:')
-  ? new URL('.', import.meta.url).pathname.replace(/^\/([a-zA-Z]:\/?)/, '$1').replace(/\//g, '\\')
-  : new URL('.', import.meta.url).toString();
-const DB_PATH = path.resolve(__dirname, '../../data/freeapi.db');
+const __filename = typeof import.meta.url === 'string' ? fileURLToPath(import.meta.url) : import.meta.url;
+const __dirname = path.dirname(path.dirname(__filename)); // 向上两级：dist/db -> dist
+const DB_PATH = path.join(__dirname, 'data', 'freeapi.db');
 
 let db: DatabaseType;
 
