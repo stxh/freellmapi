@@ -70,48 +70,50 @@ function Brand() {
 }
 
 function App() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <div className="min-h-screen bg-background">
-          {isAuthenticated ? (
-            <>
-              <header className="sticky top-0 z-40 bg-background/80 backdrop-blur border-b">
-                <div className="max-w-6xl mx-auto px-6 flex items-center">
-                  <Brand />
-                  <nav className="flex items-center gap-6 ml-10">
-                    <NavItem to="/playground">Playground</NavItem>
-                    <NavItem to="/keys">Keys</NavItem>
-                    <NavItem to="/fallback">Fallback</NavItem>
-                    <NavItem to="/analytics">Analytics</NavItem>
-                  </nav>
-                 <div className="ml-auto py-2">
-                   <NavItem to="/settings">⚙️ Settings</NavItem>
-                   <DarkModeToggle />
-                 </div>
+          <>
+            <header className="sticky top-0 z-40 bg-background/80 backdrop-blur border-b">
+              <div className="max-w-6xl mx-auto px-6 flex items-center">
+                <Brand />
+                <nav className="flex items-center gap-6 ml-10">
+                  <NavItem to="/playground">Playground</NavItem>
+                  <NavItem to="/keys">Keys</NavItem>
+                  <NavItem to="/fallback">Fallback</NavItem>
+                  <NavItem to="/analytics">Analytics</NavItem>
+                </nav>
+                <div className="ml-auto py-2">
+                  <NavItem to="/settings">⚙️ Settings</NavItem>
+                   {isAuthenticated ? (
+                     <Button variant="ghost" size="sm" onClick={logout}>
+                       Logout
+                     </Button>
+                   ) : (
+                     <NavItem to="/login">Login</NavItem>
+                   )}
+                  <DarkModeToggle />
                 </div>
-              </header>
-              <main className="max-w-6xl mx-auto px-6 py-8">
-                <Routes>
-                  <Route path="/" element={<Navigate to="/playground" replace />} />
-                  <Route path="/playground" element={<PlaygroundPage />} />
-                  <Route path="/keys" element={<KeysPage />} />
-                  <Route path="/fallback" element={<FallbackPage />} />
-                  <Route path="/analytics" element={<AnalyticsPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/test" element={<Navigate to="/playground" replace />} />
-                  <Route path="/health" element={<Navigate to="/keys" replace />} />
-                </Routes>
-              </main>
-            </>
-          ) : (
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          )}
+              </div>
+            </header>
+            <main className="max-w-6xl mx-auto px-6 py-8">
+              <Routes>
+                <Route path="/" element={<Navigate to="/playground" replace />} />
+                <Route path="/playground" element={<PlaygroundPage />} />
+                <Route path="/keys" element={<KeysPage />} />
+                <Route path="/fallback" element={<FallbackPage />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/test" element={<Navigate to="/playground" replace />} />
+                <Route path="/health" element={<Navigate to="/keys" replace />} />
+                <Route path="*" element={<Navigate to="/playground" replace />} />
+              </Routes>
+            </main>
+          </>
         </div>
       </BrowserRouter>
     </QueryClientProvider>

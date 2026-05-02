@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
+import { getServerConfig } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 const SettingsPage = () => {
   const { serverConfig, updateServerConfig, logout } = useAuth()
-  const [serverUrl, setServerUrl] = useState(serverConfig.serverUrl)
+  const [serverUrl, setServerUrl] = useState(serverConfig.serverUrl || getServerConfig().serverUrl)
   const [token, setToken] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)

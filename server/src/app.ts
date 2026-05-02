@@ -22,13 +22,31 @@ export function createApp() {
   app.use(cors());
   app.use(express.json({ limit: '1mb' }));
 
-  // API routes
-  app.use('/api/keys', keysRouter);
-  app.use('/api/models', modelsRouter);
-  app.use('/api/fallback', fallbackRouter);
-  app.use('/api/analytics', analyticsRouter);
-  app.use('/api/health', healthRouter);
-  app.use('/api/settings', settingsRouter);
+  // API routes with debug logging
+  app.use('/api/keys', (req, res, next) => {
+    console.log(`[API] ${req.method} ${req.path} from ${req.ip} (${req.get('User-Agent') || 'unknown'})`);
+    next();
+  }, keysRouter);
+  app.use('/api/models', (req, res, next) => {
+    console.log(`[API] ${req.method} ${req.path} from ${req.ip} (${req.get('User-Agent') || 'unknown'})`);
+    next();
+  }, modelsRouter);
+  app.use('/api/fallback', (req, res, next) => {
+    console.log(`[API] ${req.method} ${req.path} from ${req.ip} (${req.get('User-Agent') || 'unknown'})`);
+    next();
+  }, fallbackRouter);
+  app.use('/api/analytics', (req, res, next) => {
+    console.log(`[API] ${req.method} ${req.path} from ${req.ip} (${req.get('User-Agent') || 'unknown'})`);
+    next();
+  }, analyticsRouter);
+  app.use('/api/health', (req, res, next) => {
+    console.log(`[API] ${req.method} ${req.path} from ${req.ip} (${req.get('User-Agent') || 'unknown'})`);
+    next();
+  }, healthRouter);
+  app.use('/api/settings', (req, res, next) => {
+    console.log(`[API] ${req.method} ${req.path} from ${req.ip} (${req.get('User-Agent') || 'unknown'})`);
+    next();
+  }, settingsRouter);
 
   // OpenAI-compatible proxy
   app.use('/v1', proxyRouter);

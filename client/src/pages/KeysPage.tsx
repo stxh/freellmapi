@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiFetch } from '@/lib/api'
+import { apiFetch, getServerConfig } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -113,7 +113,7 @@ function UnifiedKeySection() {
 
       <div className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
         <span className="text-muted-foreground">Base URL</span>
-        <code className="font-mono">http://localhost:3001/v1</code>
+        <code className="font-mono">{getServerConfig().serverUrl}/v1</code>
         <span className="text-muted-foreground">Endpoint</span>
         <code className="font-mono">/v1/chat/completions</code>
       </div>

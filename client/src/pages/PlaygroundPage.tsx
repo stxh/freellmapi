@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { apiFetch } from '@/lib/api'
+import { apiFetch, getServerConfig } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageHeader } from '@/components/page-header'
@@ -62,22 +62,22 @@ export default function PlaygroundPage() {
     setLoading(true)
     inputRef.current?.focus()
 
-    try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (keyData?.apiKey) headers['Authorization'] = `Bearer ${keyData.apiKey}`
+      try {
+        const { serverUrl } = getServerConfig()
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (keyData?.apiKey) headers['Authorization'] = `Bearer ${keyData.apiKey}`
 
-      const body: any = {
-        messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-      }
-      if (selectedModel !== 'auto') body.model = selectedModel
+        const body: any = {
+          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+        }
+        if (selectedModel !== 'auto') body.model = selectedModel
 
-      const base = import.meta.env.BASE_URL.replace(/\/$/, '')
-      const start = Date.now()
-      const res = await fetch(`${base}/v1/chat/completions`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-      })
+        const start = Date.now()
+        const res = await fetch(`${serverUrl.replace(/\/$/, '')}/v1/chat/completions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body),
+        })
 
       const latency = Date.now() - start
       const routedVia = res.headers.get('X-Routed-Via')

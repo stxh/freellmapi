@@ -1,4 +1,4 @@
-function getServerConfig() {
+export function getServerConfig() {
   const defaultServer = 'http://localhost:3001';
   const stored = localStorage.getItem('serverConfig');
   

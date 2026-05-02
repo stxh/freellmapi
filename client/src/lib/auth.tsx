@@ -32,22 +32,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    const savedConfig = localStorage.getItem('serverConfig');
-    if (savedConfig) {
-      try {
-        const config = JSON.parse(savedConfig);
-        setServerConfig({
-          serverUrl: config.serverUrl || 'http://localhost:3001',
-          token: config.token || ''
-        });
-        setIsAuthenticated(!!config.token);
-      } catch {
+    const syncFromLocalStorage = () => {
+      const savedConfig = localStorage.getItem('serverConfig');
+      if (savedConfig) {
+        try {
+          const config = JSON.parse(savedConfig);
+          setServerConfig({
+            serverUrl: config.serverUrl || 'http://localhost:3001',
+            token: config.token || ''
+          });
+          setIsAuthenticated(!!config.token);
+        } catch {
+          setServerConfig({
+            serverUrl: 'http://localhost:3001',
+            token: ''
+          });
+          setIsAuthenticated(false);
+        }
+      } else {
         setServerConfig({
           serverUrl: 'http://localhost:3001',
           token: ''
         });
+        setIsAuthenticated(false);
       }
-    }
+    };
+
+    syncFromLocalStorage();
+
+    // 监听localStorage变化以保持同步
+    const storageListener = () => {
+      syncFromLocalStorage();
+    };
+    window.addEventListener('storage', storageListener);
+    return () => window.removeEventListener('storage', storageListener);
   }, []);
 
   const login = (serverUrl: string, token: string) => {
