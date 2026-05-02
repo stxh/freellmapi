@@ -8,9 +8,9 @@
   ],
   "scripts": {
     "dev": "cd server && bun run dev",
-    "test": "bun run test -w server && bun run test -w client",
-    "build": "bun run build -w server && bun run build -w client",
-    "build:server": "bun run build -w server"
+    "test": "cd server && bun test && cd ../client && bun test",
+    "build": "cd client && bun run build && cd ../server && bun run build",
+    "build:server": "cd server && bun run build"
   },
   "devDependencies": {}
 }

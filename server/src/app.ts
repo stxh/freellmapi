@@ -144,7 +144,7 @@ export function createApp() {
   app.use(errorHandler);
 
   // Serve client static files (after API error handler)
-  const clientDist = path.resolve(__dirname, '../../client/dist');
+  const clientDist = path.resolve(__dirname, 'web');
   app.use(express.static(clientDist));
   // SPA fallback — serve index.html for non-API routes
   app.use((req, res, next) => {

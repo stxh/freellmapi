@@ -11,6 +11,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    outDir: '../server/dist/web',
+    emptyOutDir: true,
+  },
   server: {
     proxy: {
       '/api': 'http://localhost:3001',
