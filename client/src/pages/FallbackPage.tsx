@@ -151,6 +151,19 @@ function SortableModelRow({
     transition,
   }
 
+  const copyModelId = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(entry.modelId)
+      const target = e.currentTarget as HTMLElement
+      const originalText = target.textContent
+      target.textContent = 'Copied!'
+      setTimeout(() => { target.textContent = originalText }, 1200)
+    } catch (err) {
+      console.error('Copy failed:', err)
+    }
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -173,7 +186,16 @@ function SortableModelRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-sm">{entry.displayName}</span>
-          <span className="text-xs text-muted-foreground">{entry.platform}</span>
+          <span className="text-xs text-muted-foreground">
+            {entry.platform} /{' '}
+            <span
+              className="cursor-pointer hover:underline"
+              onClick={copyModelId}
+              title="Click to copy model ID"
+            >
+              {entry.modelId}
+            </span>
+          </span>
           {entry.penalty > 0 && (
             <span className="text-xs text-amber-600 dark:text-amber-400">
               −{entry.penalty} penalty
