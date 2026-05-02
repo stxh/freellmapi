@@ -16,3 +16,7 @@ server/data/
 deploy-pi.sh
 update-hermes.sh
 bun.lock
+
+.arts/
+.catpaw/
+.codeartsdoer/
