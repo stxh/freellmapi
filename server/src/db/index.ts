@@ -8,7 +8,7 @@ const { Database } = (global as any).bun?.sqlite || require('bun:sqlite');
 type DatabaseType = InstanceType<typeof Database>;
 
 const __filename = typeof import.meta.url === 'string' ? fileURLToPath(import.meta.url) : import.meta.url;
-const __dirname = path.dirname(path.dirname(__filename)); // 向上两级：dist/db -> dist
+const __dirname = path.dirname(__filename);
 const DB_PATH = path.join(__dirname, 'data', 'freeapi.db');
 
 let db: DatabaseType;
