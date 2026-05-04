@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import { initEncryptionKey, encrypt, decrypt } from '../../lib/crypto.js';
 
-function freshDb(): Database.Database {
+function freshDb(): Database {
   const db = new Database(':memory:');
   db.exec(`CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
   return db;
@@ -17,7 +17,6 @@ describe('initEncryptionKey — input validation', () => {
     process.env.ENCRYPTION_KEY = 'a'.repeat(64);
     const db = freshDb();
     expect(() => initEncryptionKey(db)).not.toThrow();
-    // Round-trip a value to confirm the key actually works.
     const enc = encrypt('hello');
     expect(decrypt(enc.encrypted, enc.iv, enc.authTag)).toBe('hello');
   });
@@ -35,7 +34,7 @@ describe('initEncryptionKey — input validation', () => {
   });
 
   it('throws on non-hex env key of correct length', () => {
-    process.env.ENCRYPTION_KEY = 'g'.repeat(64); // g is not hex
+    process.env.ENCRYPTION_KEY = 'g'.repeat(64);
     const db = freshDb();
     expect(() => initEncryptionKey(db)).toThrow(/Invalid ENCRYPTION_KEY \(env\)/);
   });
@@ -44,7 +43,6 @@ describe('initEncryptionKey — input validation', () => {
     process.env.ENCRYPTION_KEY = 'your-64-char-hex-key-here';
     const db = freshDb();
     expect(() => initEncryptionKey(db)).not.toThrow();
-    // Fell through to generation — DB now has a key.
     const row = db.prepare("SELECT value FROM settings WHERE key = 'encryption_key'").get() as { value: string };
     expect(row.value).toMatch(/^[0-9a-f]{64}$/);
   });
