@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 
 const PORT = parseInt(process.env.PORT ?? '3001');
+const HOST = process.env.HOST ?? '0.0.0.0';
 const __filename = import.meta.url.startsWith('file:') ? fileURLToPath(import.meta.url) : import.meta.url;
 const __dirname = path.dirname(__filename);
 const DB_PATH = path.join(__dirname, 'data', 'freeapi.db');
@@ -28,7 +29,7 @@ initDb(DB_PATH);
 
 const server = Bun.serve({
   port: PORT,
-  hostname: '127.0.0.1',
+  hostname: HOST,
 
   async fetch(req: Request) {
     const url = new URL(req.url);
@@ -108,8 +109,8 @@ const server = Bun.serve({
   },
 });
 
-console.log(`Server running on http://127.0.0.1:${PORT}`);
-console.log(`Proxy endpoint: http://127.0.0.1:${PORT}/v1/chat/completions`);
+console.log(`Server running on http://${HOST}:${PORT}`);
+console.log(`Proxy endpoint: http://${HOST}:${PORT}/v1/chat/completions`);
 startHealthChecker();
 
 function addCors(req: Request, res: Response): Response {
