@@ -48,6 +48,7 @@ export function initDb(dbPath?: string): DatabaseType {
   migrateModelsV8(db);
   migrateModelsV9(db);
   ensureUnifiedKey(db);
+  ensureAdminUser(db);
 
   console.log(`Database initialized at ${resolvedPath}`);
   return db;
@@ -111,9 +112,26 @@ function createTables(db: DatabaseType) {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      salt TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      token TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at);
     CREATE INDEX IF NOT EXISTS idx_requests_platform ON requests(platform);
     CREATE INDEX IF NOT EXISTS idx_api_keys_platform ON api_keys(platform);
+    CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
   `);
 }
 
@@ -776,6 +794,23 @@ function migrateModelsV9(db: DatabaseType) {
   db.prepare(
     "UPDATE models SET enabled = 0 WHERE platform = 'cerebras' AND model_id = 'zai-glm-4.7'"
   ).run();
+}
+
+function ensureAdminUser(db: DatabaseType) {
+  const count = db.prepare('SELECT COUNT(*) as cnt FROM users').get() as { cnt: number };
+  if (count.cnt > 0) return;
+
+  const username = 'admin';
+  const password = process.env.ADMIN_PASSWORD || `${crypto.randomBytes(3).toString('hex')}-${crypto.randomBytes(3).toString('hex')}`;
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+
+  db.prepare('INSERT INTO users (username, password_hash, salt) VALUES (?, ?, ?)').run(username, hash, salt);
+
+  console.log(`\n  Admin user created:`);
+  console.log(`  Username: ${username}`);
+  console.log(`  Password: ${password}`);
+  console.log(`  (set ADMIN_PASSWORD env var on first run to use a custom password)\n`);
 }
 
 function ensureUnifiedKey(db: DatabaseType) {

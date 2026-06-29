@@ -7,6 +7,8 @@ import { analyticsRoute } from './routes/bun/analytics.js';
 import { healthRoute } from './routes/bun/health.js';
 import { settingsRoute } from './routes/bun/settings.js';
 import { proxyRoute } from './routes/bun/proxy.js';
+import { authRoute } from './routes/bun/auth.js';
+import { authenticateRequest } from './lib/auth.js';
 import { serveStatic } from './lib/static.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -46,6 +48,18 @@ const server = Bun.serve({
           'Access-Control-Allow-Credentials': 'true',
         }
       });
+    }
+
+    // Auth routes (no auth required)
+    if (pathname.startsWith('/api/auth/')) {
+      const res = await authRoute(req, url);
+      return addCors(req, res);
+    }
+
+    // Require authentication for all /api/* routes (except ping)
+    if (pathname.startsWith('/api/') && pathname !== '/api/ping') {
+      const auth = authenticateRequest(req);
+      if (!auth.ok) return addCors(req, auth.response);
     }
 
     // API routes

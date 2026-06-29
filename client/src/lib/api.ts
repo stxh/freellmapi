@@ -1,38 +1,27 @@
-export function getServerConfig() {
-  const defaultServer = 'http://localhost:3001';
-  const stored = localStorage.getItem('serverConfig');
-  
-  if (stored) {
-    try {
-      const config = JSON.parse(stored);
-      return {
-        serverUrl: config.serverUrl || defaultServer,
-        token: config.token || ''
-      };
-    } catch {
-      return { serverUrl: defaultServer, token: '' };
+export function getAuthToken(): string {
+  try {
+    const stored = localStorage.getItem('auth');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.token || '';
     }
-  }
-  
-  return { serverUrl: defaultServer, token: '' };
+  } catch {}
+  return '';
 }
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const { serverUrl, token } = getServerConfig();
-  
-  const url = path.startsWith('http') ? path : `${serverUrl.replace(/\/$/, '')}${path}`;
-  
+  const token = getAuthToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-    ...options?.headers
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options?.headers,
   };
-  
-  const res = await fetch(url, {
+
+  const res = await fetch(path, {
     headers,
     ...options,
   });
-  
+
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: { message: res.statusText } }));
     throw new Error(body.error?.message ?? `HTTP ${res.status}`);

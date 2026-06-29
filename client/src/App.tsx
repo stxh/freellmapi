@@ -69,51 +69,86 @@ function Brand() {
   )
 }
 
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="size-8 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin mx-auto" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  return <>{children}</>
+}
+
 function App() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
         <div className="min-h-screen bg-background">
-          <>
-            <header className="sticky top-0 z-40 bg-background/80 backdrop-blur border-b">
-              <div className="max-w-6xl mx-auto px-6 flex items-center">
-                <Brand />
-                <nav className="flex items-center gap-6 ml-10">
-                  <NavItem to="/playground">Playground</NavItem>
-                  <NavItem to="/keys">Keys</NavItem>
-                  <NavItem to="/fallback">Fallback</NavItem>
-                  <NavItem to="/analytics">Analytics</NavItem>
-                </nav>
-                <div className="ml-auto py-2">
-                  <NavItem to="/settings">⚙️ Settings</NavItem>
-                   {isAuthenticated ? (
-                     <Button variant="ghost" size="sm" onClick={logout}>
-                       Logout
-                     </Button>
-                   ) : (
-                     <NavItem to="/login">Login</NavItem>
-                   )}
-                  <DarkModeToggle />
-                </div>
-              </div>
-            </header>
-            <main className="max-w-6xl mx-auto px-6 py-8">
-              <Routes>
-                <Route path="/" element={<Navigate to="/playground" replace />} />
-                <Route path="/playground" element={<PlaygroundPage />} />
-                <Route path="/keys" element={<KeysPage />} />
-                <Route path="/fallback" element={<FallbackPage />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/test" element={<Navigate to="/playground" replace />} />
-                <Route path="/health" element={<Navigate to="/keys" replace />} />
-                <Route path="*" element={<Navigate to="/playground" replace />} />
-              </Routes>
-            </main>
-          </>
+          {isLoading ? (
+            <div className="min-h-screen flex items-center justify-center bg-background">
+              <div className="size-8 border-2 border-foreground/20 border-t-foreground rounded-full animate-spin" />
+            </div>
+          ) : (
+            <>
+              {isAuthenticated && (
+                <header className="sticky top-0 z-40 bg-background/80 backdrop-blur border-b">
+                  <div className="max-w-6xl mx-auto px-6 flex items-center">
+                    <Brand />
+                    <nav className="flex items-center gap-6 ml-10">
+                      <NavItem to="/playground">Playground</NavItem>
+                      <NavItem to="/keys">Keys</NavItem>
+                      <NavItem to="/fallback">Fallback</NavItem>
+                      <NavItem to="/analytics">Analytics</NavItem>
+                    </nav>
+                    <div className="ml-auto py-2 flex items-center gap-2">
+                      <NavItem to="/settings">Settings</NavItem>
+                      <span className="text-xs text-muted-foreground">{user?.username}</span>
+                      <Button variant="ghost" size="sm" onClick={logout}>
+                        Logout
+                      </Button>
+                      <DarkModeToggle />
+                    </div>
+                  </div>
+                </header>
+              )}
+              <main className={isAuthenticated ? "max-w-6xl mx-auto px-6 py-8" : ""}>
+                <Routes>
+                  <Route path="/login" element={
+                    isAuthenticated ? <Navigate to="/playground" replace /> : <LoginPage />
+                  } />
+                  <Route path="/" element={
+                    <ProtectedRoute><Navigate to="/playground" replace /></ProtectedRoute>
+                  } />
+                  <Route path="/playground" element={
+                    <ProtectedRoute><PlaygroundPage /></ProtectedRoute>
+                  } />
+                  <Route path="/keys" element={
+                    <ProtectedRoute><KeysPage /></ProtectedRoute>
+                  } />
+                  <Route path="/fallback" element={
+                    <ProtectedRoute><FallbackPage /></ProtectedRoute>
+                  } />
+                  <Route path="/analytics" element={
+                    <ProtectedRoute><AnalyticsPage /></ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute><SettingsPage /></ProtectedRoute>
+                  } />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </main>
+            </>
+          )}
         </div>
       </BrowserRouter>
     </QueryClientProvider>
