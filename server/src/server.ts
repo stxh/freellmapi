@@ -1,5 +1,6 @@
 import { initDb } from './db/index.js';
 import { startHealthChecker } from './services/health.js';
+import { restoreLatestBackup, startBackupScheduler } from './services/backup.js';
 import { apiKeysRoute } from './routes/bun/keys.js';
 import { modelsRoute } from './routes/bun/models.js';
 import { fallbackRoute } from './routes/bun/fallback.js';
@@ -27,9 +28,11 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-initDb(DB_PATH);
+async function start() {
+  initDb(DB_PATH);
+  await restoreLatestBackup();
 
-const server = Bun.serve({
+  const server = Bun.serve({
   port: PORT,
   hostname: HOST,
 
@@ -123,9 +126,13 @@ const server = Bun.serve({
   },
 });
 
-console.log(`Server running on http://${HOST}:${PORT}`);
-console.log(`Proxy endpoint: http://${HOST}:${PORT}/v1/chat/completions`);
-startHealthChecker();
+  console.log(`Server running on http://${HOST}:${PORT}`);
+  console.log(`Proxy endpoint: http://${HOST}:${PORT}/v1/chat/completions`);
+  startHealthChecker();
+  startBackupScheduler();
+}
+
+start().catch(console.error);
 
 function addCors(req: Request, res: Response): Response {
   const origin = req.headers.get('origin');
