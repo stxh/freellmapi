@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@freellmapi/shared": "*",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "socks-proxy-agent": "^10.0.0",
+    "undici": "^6.21.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

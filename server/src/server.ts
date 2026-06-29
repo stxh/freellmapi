@@ -1,6 +1,7 @@
 import { initDb } from './db/index.js';
 import { startHealthChecker } from './services/health.js';
-import { restoreLatestBackup, startBackupScheduler } from './services/backup.js';
+import { restoreLatestBackup, createBackup, startBackupScheduler } from './services/backup.js';
+import { NodeScheduler } from './lib/scheduler.js';
 import { apiKeysRoute } from './routes/bun/keys.js';
 import { modelsRoute } from './routes/bun/models.js';
 import { fallbackRoute } from './routes/bun/fallback.js';
@@ -30,7 +31,10 @@ if (!fs.existsSync(dataDir)) {
 
 async function start() {
   initDb(DB_PATH);
-  await restoreLatestBackup();
+  const restored = await restoreLatestBackup();
+  if (!restored) {
+    await createBackup();
+  }
 
   const server = Bun.serve({
   port: PORT,
@@ -128,7 +132,8 @@ async function start() {
 
   console.log(`Server running on http://${HOST}:${PORT}`);
   console.log(`Proxy endpoint: http://${HOST}:${PORT}/v1/chat/completions`);
-  startHealthChecker();
+  const scheduler = new NodeScheduler();
+  startHealthChecker(scheduler);
   startBackupScheduler();
 }
 

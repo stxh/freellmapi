@@ -21,11 +21,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run server tests
-        run: npm test -w server
+      - name: Check migration round trip
+        run: npm run test:migrations
 
-      - name: Build server
-        run: npm run build -w server
+      - name: Run tests
+        run: npm test
 
-      - name: Build client
-        run: npm run build -w client
+      - name: Build workspaces
+        run: npm run build
