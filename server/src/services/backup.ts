@@ -2,12 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
+import { repoExists, createRepo, uploadFile, deleteFiles, listFiles } from '@huggingface/hub';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env.FREEAPI_DB_PATH || path.resolve(__dirname, '../../data/freeapi.db');
+const DB_PATH = process.env.FREEAPI_DB_PATH || path.resolve(__dirname, '../data/freeapi.db');
 const DB_FILENAME = path.basename(DB_PATH);
 
-const HF_TOKEN = process.env.HF_TOKEN;
+const HF_TOKEN = process.env.HF_TOKEN || '';
 const HF_DATASET_ID = process.env.HF_DATASET_ID || '';
 const BACKUP_ENABLED = process.env.BACKUP_ENABLED === 'true';
 const BACKUP_INTERVAL_MS = Number(process.env.BACKUP_INTERVAL_MS ?? 86400000);
@@ -18,10 +19,6 @@ const BACKUP_SUFFIX = '.db';
 
 function log(msg: string) {
   console.log(`[Backup] ${msg}`);
-}
-
-function hfHeaders(): Record<string, string> {
-  return { Authorization: `Bearer ${HF_TOKEN}` };
 }
 
 function parseBackupTimestamp(filename: string): number {
@@ -79,6 +76,9 @@ function createSnapshot(src: string, dst: string): boolean {
   }
 }
 
+const creds = { accessToken: HF_TOKEN };
+const repo = { name: HF_DATASET_ID, type: 'dataset' as const };
+
 export async function restoreLatestBackup(): Promise<boolean> {
   if (!BACKUP_ENABLED || !HF_TOKEN || !HF_DATASET_ID) {
     log('Backup not configured, skipping restore.');
@@ -87,19 +87,25 @@ export async function restoreLatestBackup(): Promise<boolean> {
 
   try {
     log('Checking for remote backups...');
-    const res = await fetch(`https://huggingface.co/api/datasets/${HF_DATASET_ID}`, {
-      headers: hfHeaders(),
-    });
-
-    if (res.status === 404) {
-      log('Dataset not found, skipping restore.');
+    const exists = await repoExists({ repo, ...creds });
+    if (!exists) {
+      log('Dataset not found, will create on next backup.');
+      try {
+        await createRepo({ repo, ...creds });
+        log(`Dataset ${HF_DATASET_ID} created successfully.`);
+      } catch (e: any) {
+        log(`Failed to create dataset: ${e.message || e}`);
+      }
       return false;
     }
-    if (!res.ok) throw new Error(`list failed: ${res.status} ${res.statusText}`);
 
-    const data = await res.json() as any;
-    const files: string[] = (data.siblings || []).map((s: any) => s.rfilename).filter(Boolean);
-    const backups = files.filter(f => f.startsWith(BACKUP_PREFIX) && f.endsWith(BACKUP_SUFFIX)).sort();
+    const backups: string[] = [];
+    for await (const entry of listFiles({ repo, recursive: false, ...creds })) {
+      if (entry.path.startsWith(BACKUP_PREFIX) && entry.path.endsWith(BACKUP_SUFFIX)) {
+        backups.push(entry.path);
+      }
+    }
+    backups.sort();
 
     if (backups.length === 0) {
       log('No backups found in dataset.');
@@ -119,7 +125,7 @@ export async function restoreLatestBackup(): Promise<boolean> {
     }
 
     const dlRes = await fetch(`https://huggingface.co/datasets/${HF_DATASET_ID}/resolve/main/${latest}`, {
-      headers: hfHeaders(),
+      headers: { Authorization: `Bearer ${HF_TOKEN}` },
     });
     if (!dlRes.ok) throw new Error(`download failed: ${dlRes.status}`);
     const buffer = Buffer.from(await dlRes.arrayBuffer());
@@ -157,16 +163,25 @@ export async function createBackup(): Promise<boolean> {
     log(`Creating backup: ${filename}`);
 
     const fileBuffer = fs.readFileSync(tmpPath);
-    const uploadRes = await fetch(`https://huggingface.co/api/datasets/${HF_DATASET_ID}/content/${filename}`, {
-      method: 'PUT',
-      headers: { ...hfHeaders(), 'Content-Type': 'application/octet-stream' },
-      body: fileBuffer,
-    });
+    const file = new File([fileBuffer], filename, { type: 'application/octet-stream' });
 
-    if (!uploadRes.ok) {
-      const text = await uploadRes.text();
-      throw new Error(`Upload failed: ${uploadRes.status} ${uploadRes.statusText} - ${text}`);
+    const maxRetries = 3;
+    let lastErr: Error | null = null;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      if (attempt > 1) {
+        log(`Retry ${attempt}/${maxRetries}...`);
+        await new Promise(r => setTimeout(r, 3000));
+      }
+      try {
+        await uploadFile({ repo, file, ...creds });
+        lastErr = null;
+        break;
+      } catch (e: any) {
+        lastErr = e;
+        log(`Attempt ${attempt}/${maxRetries}: ${e.message || e}`);
+      }
     }
+    if (lastErr) throw lastErr;
 
     log(`Uploaded ${filename} successfully.`);
     await cleanupOldBackups();
@@ -183,31 +198,28 @@ async function cleanupOldBackups(): Promise<void> {
   if (KEEP_BACKUPS <= 0) return;
 
   try {
-    const res = await fetch(`https://huggingface.co/api/datasets/${HF_DATASET_ID}`, {
-      headers: hfHeaders(),
-    });
-    if (!res.ok) return;
+    const backups: string[] = [];
+    for await (const entry of listFiles({ repo, recursive: false, ...creds })) {
+      if (entry.path.startsWith(BACKUP_PREFIX) && entry.path.endsWith(BACKUP_SUFFIX)) {
+        backups.push(entry.path);
+      }
+    }
 
-    const data = await res.json() as any;
-    const files: string[] = (data.siblings || []).map((s: any) => s.rfilename).filter(Boolean);
-    const backups = files.filter(f => f.startsWith(BACKUP_PREFIX) && f.endsWith(BACKUP_SUFFIX))
+    const sorted = backups
       .map(f => ({ name: f, ts: parseBackupTimestamp(f) }))
       .filter(f => f.ts > 0)
       .sort((a, b) => a.ts - b.ts);
 
-    if (backups.length <= KEEP_BACKUPS) return;
+    if (sorted.length <= KEEP_BACKUPS) return;
 
-    const toDelete = backups.slice(0, backups.length - KEEP_BACKUPS);
-    for (const { name } of toDelete) {
-      try {
-        await fetch(`https://huggingface.co/api/datasets/${HF_DATASET_ID}/content/${name}`, {
-          method: 'DELETE',
-          headers: hfHeaders(),
-        });
+    const toDelete = sorted.slice(0, sorted.length - KEEP_BACKUPS).map(f => f.name);
+    try {
+      await deleteFiles({ repo, paths: toDelete, ...creds });
+      for (const name of toDelete) {
         log(`Cleaned up old backup: ${name}`);
-      } catch (e: any) {
-        log(`Failed to delete ${name}: ${e.message || e}`);
       }
+    } catch (e: any) {
+      log(`Cleanup failed: ${e.message || e}`);
     }
   } catch (err) {
     console.error('[Backup] Cleanup failed:', err);
